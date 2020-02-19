@@ -18,7 +18,7 @@
 using namespace qcloud_cos;
 void PrintResult(const qcloud_cos::CosResult& result, const qcloud_cos::BaseResp& resp) {
     if (result.IsSucc()) {
-        std::cout << resp.DebugString() << std::endl;
+        std::cout << resp.DebugString() << std::endl; 
     } else {
         std::cout << "ErrorInfo=" << result.GetErrorInfo() << std::endl;
         std::cout << "HttpStatus=" << result.GetHttpStatus() << std::endl;
@@ -947,13 +947,41 @@ void DeleteBucketInventory(qcloud_cos::CosAPI& cos, const std::string& bucket_na
     std::cout << "====================================================================" << std::endl;	
 }
 
+void SelectObjectContent(qcloud_cos::CosAPI& cos, const std::string& bucket_name, 
+                  const std::string& object_name, const std::string& sql_expression) {
+    qcloud_cos::SelectObjectContentReq req(bucket_name, object_name);
+   
+    req.SetExpression(sql_expression, SQL);
+    req.SetRequetProgress(false);
+
+    JSONInputFormat csvinput_format;
+    req.SetInputFormat(&csvinput_format);
+   
+    JSONOutputFormat csvoutput_format;
+    req.SetOutputFormat(&csvoutput_format);
+
+    qcloud_cos::SelectObjectContentResp resp;
+
+    qcloud_cos::CosResult result = cos.SelectObjectContent(req, &resp);
+
+    std::cout << "===================SelectObjectContent=====================" << std::endl;
+    PrintResult(result, resp);
+    std::cout << "====================================================================" << std::endl;
+
+}
+
 
 int main(int argc, char** argv) {
     qcloud_cos::CosConfig config("./config.json");
     qcloud_cos::CosAPI cos(config);
 
     std::string bucket_name = "test1-1234567890";
-    
+    std::string object_name = "test.json";
+
+    std::string sql_expression = "Select * from COSObject";
+ 
+    SelectObjectContent(cos, bucket_name, object_name, sql_expression);
+ 
     //PutBucketInventory(cos, bucket_name);
     //GetBucketInventory(cos,bucket_name);
     //PutBucketDomain(cos, bucket_name);

@@ -6,7 +6,7 @@
 // Description:
 
 #include "request/object_req.h"
-
+#include "cos_defines.h"
 #include "rapidxml/1.13/rapidxml.hpp"
 #include "rapidxml/1.13/rapidxml_print.hpp"
 #include "rapidxml/1.13/rapidxml_utils.hpp"
@@ -142,6 +142,84 @@ bool PostObjectRestoreReq::GenerateRequestBody(std::string* body) const {
     root_node->append_node(xml_rule);
     xml_rule->append_node(doc.allocate_node(rapidxml::node_element, doc.allocate_string("Tier"),
                 doc.allocate_string(m_tier.c_str())));
+
+    // 2. 填充xml字符串
+    rapidxml::print(std::back_inserter(*body), doc, 0);
+    doc.clear();
+
+    return true;
+}
+
+void SelectObjectContentReq::SetExpression(const std::string& expression, ExpressionType type = SQL) {
+    this->m_expression = expression;
+    this->m_expression_type = type;
+}
+
+void SelectObjectContentReq::SetInputFormat(InputFormat* inputformat) {
+    this->m_inputformat = inputformat;
+}
+
+void SelectObjectContentReq::SetOutputFormat(OutputFormat* outputformat) {
+    this->m_outputformat = outputformat;
+}
+
+void SelectObjectContentReq::SetRequetProgress(bool requestProgress) {
+    this->m_request_progress = requestProgress;
+}
+
+ExpressionType SelectObjectContentReq::GetExpressionType() const {
+    return this->m_expression_type;
+}
+
+std::string SelectObjectContentReq::GetExpression() const {
+    return this->m_expression;
+}
+
+InputFormat* SelectObjectContentReq::GetInputFormat() const {
+    return this->m_inputformat;
+}
+
+OutputFormat* SelectObjectContentReq::GetOutputFormat() const {
+    return this->m_outputformat;
+}
+
+bool SelectObjectContentReq::GetRequetProgress() const {
+    return this->m_request_progress;
+}
+
+bool SelectObjectContentReq::GenerateRequestBody(std::string* body) const {
+    // 1.生成SelectObjectContentReq需要的xml字符串
+    rapidxml::xml_document<> doc;
+    rapidxml::xml_node<>* root_node = doc.allocate_node(rapidxml::node_element,
+                                                doc.allocate_string("SelectRequest"),
+                                                NULL);
+    doc.append_node(root_node);
+
+    root_node->append_node(doc.allocate_node(rapidxml::node_element,
+                     doc.allocate_string("Expression"),
+                     doc.allocate_string(GetExpression().c_str())));
+
+    root_node->append_node(doc.allocate_node(rapidxml::node_element,
+                     doc.allocate_string("ExpressionType"), 
+                     doc.allocate_string(ExpressionType_Str(GetExpressionType()).c_str())));
+
+    InputFormat* inputformat = GetInputFormat();
+    rapidxml::xml_node<>* input_node;
+    inputformat->toXMLNode(input_node, &doc, root_node, 0);
+      
+    OutputFormat* outputformat = GetOutputFormat();
+    rapidxml::xml_node<>* output_node;
+    outputformat->toXMLNode(output_node, &doc, root_node);
+
+    rapidxml::xml_node<>* request_progress_node = doc.allocate_node(rapidxml::node_element,
+                                                doc.allocate_string("RequestProgress"),
+                                                NULL);
+
+    request_progress_node->append_node(doc.allocate_node(rapidxml::node_element,
+                     doc.allocate_string("Enabled"), 
+                     doc.allocate_string(Bool_Str(GetRequetProgress()).c_str())));
+
+    root_node->append_node(request_progress_node);
 
     // 2. 填充xml字符串
     rapidxml::print(std::back_inserter(*body), doc, 0);

@@ -2,10 +2,15 @@
 #define COS_DEFINE_H
 #include <stdint.h>
 #include <stdio.h>
+#include <iostream>
 #include <syslog.h>
 
 #include <vector>
 #include <string>
+
+#include "rapidxml/1.13/rapidxml.hpp"
+#include "rapidxml/1.13/rapidxml_print.hpp"
+#include "rapidxml/1.13/rapidxml_utils.hpp"
 
 namespace qcloud_cos{
 
@@ -53,6 +58,33 @@ typedef enum cos_log_level {
     COS_LOG_INFO = 3,          // LOG_INFO
     COS_LOG_DBG  = 4          // LOG_DEBUG
 } LOG_LEVEL;
+
+typedef enum ExpressionType {
+    SQL = 0
+}ExpressionType;
+
+typedef enum CompressionType {
+    NONE = 0,
+    GZIP
+}CompressionType;
+
+typedef enum CSVHeader {
+    None = 0, // there is no csv header
+    Ignore,   // we should ignore csv header and should not use csv header in select sql
+    Use       // we can use csv header in select sql
+}CSVHeader;
+
+typedef enum JsonType {
+    DOCUMENT = 0,
+    LINES
+}JsonType;
+
+std::string CSVHeader_Str(CSVHeader num);
+std::string CompressionType_Str(CompressionType num);
+std::string Bool_Str(bool flag);
+std::string JsonType_Str(JsonType num);
+std::string ExpressionType_Str(ExpressionType type);
+
 
 #define LOG_LEVEL_STRING(level) \
         ( (level == COS_LOG_DBG) ? "[DBG] " :    \
@@ -1283,6 +1315,127 @@ private:
     bool m_is_enabled;
     COSBucketDestination m_destination;
     OptionalFields m_fields;
+};
+
+class InputFormat {
+public:
+   InputFormat();
+   InputFormat(CompressionType compressionType);
+
+   void SetCompressionType(CompressionType compressionType);
+   CompressionType GetCompressionType();
+
+   virtual void toXMLNode(rapidxml::xml_node<>* node, rapidxml::xml_document<> *doc, 
+                          rapidxml::xml_node<>* root_node, int flag) = 0;
+
+private:
+    CompressionType m_compression_type;   
+};
+
+class CSVInputFormat : public InputFormat {
+ public:
+    CSVInputFormat();
+    CSVInputFormat(CompressionType compression_type,
+        CSVHeader headerInfo,
+        const std::string& record_delimiter,
+        const std::string& field_delimiter,
+        const std::string& quote_character,
+        const std::string& quote_escape_character,
+        const std::string& comments,
+        bool allow_quoted_record_delimiter);
+
+    void SetHeaderInfo(CSVHeader headerInfo);
+    void SetRecordDelimiter(const std::string& record_delimiter);
+    void SetFieldDelimiter(const std::string& field_delimiter);
+    void SetQuoteCharacter(const std::string& quote_character);
+    void SetQuoteEscapeCharacter(const std::string& quote_escape_character);
+    void SetComments(const std::string& comments);
+    void SetAllowQuoteRecordDelimiter(bool allow_quote_record_delimiter);
+
+    CSVHeader GetHeaderInfo() const;
+    const std::string& GetRecordDelimiter() const;
+    const std::string& GetFieldDelimiter() const;
+    const std::string& GetQuoteCharacter() const;
+    const std::string& GetQuoteEscapeCharacter() const;
+    const std::string& GetComments() const;
+    bool GetAllowQuoteRecordDelimiter() const;
+
+    void toXMLNode(rapidxml::xml_node<>* node, rapidxml::xml_document<> *doc, 
+                   rapidxml::xml_node<>* root_node, int flag);
+        
+private:
+    CSVHeader m_headerInfo;
+    std::string m_record_delimiter;
+    std::string m_field_delimiter;
+    std::string m_quote_character;
+    std::string m_quote_escape_character;
+    std::string m_comments;
+    bool m_allow_quote_record_delimiter;
+};
+
+class  JSONInputFormat : public InputFormat {
+public:
+    JSONInputFormat();
+    JSONInputFormat(JsonType jsonType);
+
+    void SetJsonType(JsonType jsonType);
+    JsonType GetJsonInfo() const;
+
+    void toXMLNode(rapidxml::xml_node<>* node, rapidxml::xml_document<> *doc, 
+                   rapidxml::xml_node<>* root_node,  int flag);
+
+private:
+    JsonType m_jsontype;
+};
+
+class OutputFormat {
+public:
+    OutputFormat();
+    OutputFormat(const std::string& record_delimiter);
+    void SetRecordDelimiter(std::string& record_delimiter);
+    std::string GetRecordDelimiter();
+    virtual void toXMLNode(rapidxml::xml_node<>* node, rapidxml::xml_document<> *doc,
+                           rapidxml::xml_node<>* root_node) = 0;
+
+private:
+	std::string m_record_delimiter;
+};
+
+
+class  CSVOutputFormat : public OutputFormat {
+public:
+    CSVOutputFormat();
+    CSVOutputFormat(const std::string& record_delimiter,
+            const std::string& quote_fields, const std::string& field_delimiter,
+            const std::string& quote_character, const std::string& quote_escape_character);
+
+    void SetQuoteFields(const std::string& quote_fields);
+    void SetFieldDelimiter(const std::string& field_delimiter);
+    void SetQuoteCharacter(const std::string& quote_character);
+    void SetQuoteEscapeCharacter(const std::string& quote_escape_character);
+
+    std::string GetQuoteFields() const;
+    std::string GetFieldDelimiter() const;
+    std::string GetQuoteCharacter() const;
+    std::string GetQuoteEscapeCharacter() const;
+
+    void toXMLNode(rapidxml::xml_node<>* node, rapidxml::xml_document<> *doc, 
+                   rapidxml::xml_node<>* root_node);
+
+private:
+    std::string m_quote_fields;
+    std::string m_field_delimiter;
+    std::string m_quote_character;
+    std::string m_quote_escape_character;
+};
+
+class JSONOutputFormat : public OutputFormat {
+public:
+    JSONOutputFormat();
+    JSONOutputFormat(const std::string& recordDelimiter);
+
+    void toXMLNode(rapidxml::xml_node<>* node, rapidxml::xml_document<> *doc,
+                   rapidxml::xml_node<>* root_node);
 };
 
 } // namespace qcloud_cos

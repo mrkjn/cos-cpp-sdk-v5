@@ -79,6 +79,12 @@ public:
         AddParam("response-content-disposition", str);
     }
 
+    /// \brief 设置响应头部中的x-cos-traffic-limit 头部参数
+    void SetXCosTrafficLimit(uint64_t traffic_limit) {
+        std::string traffic_limit_str = StringUtil::Uint64ToString(traffic_limit);
+        AddHeader("x-cos-traffic-limit", traffic_limit_str);
+    }
+
 protected:
     GetObjectReq(const std::string& bucket_name,
                  const std::string& object_name)
@@ -150,6 +156,12 @@ public:
 
     void SetLocalFilePath(const std::string& local_file_path) {
         m_local_file_path = local_file_path;
+    }
+
+    /// \brief 设置响应头部中的x-cos-traffic-limit 头部参数
+    void SetXCosTrafficLimit(uint64_t traffic_limit) {
+        std::string traffic_limit_str = StringUtil::Uint64ToString(traffic_limit);
+        AddHeader("x-cos-traffic-limit", traffic_limit_str);
     }
 
     std::string GetLocalFilePath() const { return m_local_file_path; }
@@ -250,6 +262,12 @@ public:
     /// 设置Server端加密使用的算法, 目前支持AES256
     void SetXCosServerSideEncryption(const std::string& str) {
         AddHeader("x-cos-server-side-encryption", str);
+    }
+
+    /// \brief 设置响应头部中的x-cos-traffic-limit 头部参数
+    void SetXCosTrafficLimit(uint64_t traffic_limit) {
+        std::string traffic_limit_str = StringUtil::Uint64ToString(traffic_limit);
+        AddHeader("x-cos-traffic-limit", traffic_limit_str);
     }
 
 protected:
@@ -522,7 +540,13 @@ public:
     }
     /// \brief 设置本次分块上传的编号
     void SetPartNumber(uint64_t part_number) { m_part_number = part_number; }
-
+   
+    /// \brief 设置响应头部中的x-cos-traffic-limit 头部参数
+    void SetXCosTrafficLimit(uint64_t traffic_limit) {
+        std::string traffic_limit_str = StringUtil::Uint64ToString(traffic_limit);
+        AddHeader("x-cos-traffic-limit", traffic_limit_str);
+    }
+   
     std::string GetUploadId() const { return m_upload_id; }
 
     uint64_t GetPartNumber() const { return m_part_number; }
@@ -713,6 +737,12 @@ public:
     void SetXCosMeta(const std::string& key, const std::string& value) {
         mb_set_meta = true;
         m_xcos_meta.insert(std::pair<std::string, std::string>(key, value));
+    }
+
+    /// \brief 设置响应头部中的x-cos-traffic-limit 头部参数
+    void SetXCosTrafficLimit(uint64_t traffic_limit) {
+        std::string traffic_limit_str = StringUtil::Uint64ToString(traffic_limit);
+        AddHeader("x-cos-traffic-limit", traffic_limit_str);
     }
 
     bool IsSetXCosMeta() const{
@@ -1119,6 +1149,38 @@ public:
 private:
     uint64_t m_expiry_days;
     std::string m_tier;
+};
+
+class SelectObjectContentReq : public ObjectReq {
+public:
+    SelectObjectContentReq(const std::string& bucket_name,
+                 const std::string& object_name)
+        : ObjectReq(bucket_name, object_name) {
+        m_method = "POST";
+        AddParam("select", "");
+        AddParam("select-type", "2");
+    }
+
+    void SetExpression(const std::string& expression, ExpressionType type);
+    void SetInputFormat(InputFormat* inputformat);
+    void SetOutputFormat(OutputFormat* outputformat);
+    void SetRequetProgress(bool requestProgress);
+
+    std::string GetExpression() const;
+    InputFormat* GetInputFormat() const;
+    OutputFormat* GetOutputFormat() const;
+    bool GetRequetProgress() const;
+    ExpressionType GetExpressionType() const;
+    bool GenerateRequestBody(std::string* body) const;
+    virtual ~SelectObjectContentReq() {} 
+
+private:
+    ExpressionType m_expression_type;
+    std::string m_expression;
+    InputFormat *m_inputformat;
+    OutputFormat *m_outputformat;
+    bool m_request_progress;
+      
 };
 
 class GeneratePresignedUrlReq : public ObjectReq {

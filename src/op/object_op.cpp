@@ -1056,6 +1056,96 @@ void ObjectOp::FillCopyTask(const std::string& upload_id,
     task_ptr->SetHeaders(req_headers);
 }
 
+CosResult ObjectOp::SelectObjectContent(const SelectObjectContentReq& req, 
+                            SelectObjectContentResp* resp) {
+
+    CosResult result;
+    bool check_body = false;
+    std::string path = req.GetPath();
+    
+    std::string host = CosSysConfig::GetHost(GetAppId(), m_config->GetRegion(),
+                                             req.GetBucketName());
+    std::string req_body;
+    if (!req.GenerateRequestBody(&req_body)) {
+        result.SetErrorInfo("Generate SelectObjectContent Request Body fail.");
+        return result;
+    }
+   
+    
+    std::string raw_md5 = CodecUtil::Base64Encode(CodecUtil::RawMd5(req_body));
+
+    std::map<std::string, std::string> additional_headers;
+    std::map<std::string, std::string> additional_params;
+    additional_headers.insert(std::make_pair("Content-MD5", raw_md5));
+
+    std::map<std::string, std::string> req_headers = req.GetHeaders();
+    std::map<std::string, std::string> req_params = req.GetParams();
+    req_headers.insert(additional_headers.begin(), additional_headers.end());
+    req_params.insert(additional_params.begin(), additional_params.end());
+    const std::string& tmp_token = m_config->GetTmpToken();
+    if (!tmp_token.empty()) {
+        req_headers["x-cos-security-token"] = tmp_token;
+    }
+
+    // 1. 获取host
+    if (!CosSysConfig::IsDomainSameToHost()) {
+        req_headers["Host"] = host;
+    } else {
+        req_headers["Host"] = CosSysConfig::GetDestDomain();
+    }
+
+    // 2. 计算签名
+    std::string auth_str = AuthTool::Sign(GetAccessKey(), GetSecretKey(),
+                                          req.GetMethod(), req.GetPath(),
+                                          req_headers, req_params);
+    if (auth_str.empty()) {
+        result.SetErrorInfo("Generate auth str fail, check your access_key/secret_key.");
+        return result;
+    }
+    req_headers["Authorization"] = auth_str;
+
+    // 3. 发送请求
+    std::map<std::string, std::string> resp_headers;
+    std::string resp_body;
+    std::istringstream is(req_body);
+    std::string dest_url = GetRealUrl(host, path, req.IsHttps());
+    std::string err_msg = "";
+    std::ostringstream oss;
+    int http_code = HttpSender::SendRequest(req.GetMethod(), dest_url, req_params, req_headers,
+                                    is, req.GetConnTimeoutInms(), req.GetRecvTimeoutInms(),
+                                    &resp_headers, oss, &err_msg);
+    resp_body = oss.str();
+    if (http_code == -1) {
+        result.SetErrorInfo(err_msg);
+        return result;
+    }
+
+    // 4. 解析返回的xml字符串
+    result.SetHttpStatus(http_code);
+    if (http_code > 299 || http_code < 200) {
+        // 无法解析的错误, 填充到cos_result的error_info中
+        if (!result.ParseFromHttpResponse(resp_headers, resp_body)) {
+            result.SetErrorInfo(resp_body);
+        }
+    } else {
+        // 某些请求，如PutObjectCopy/Complete请求需要进一步检查Body
+        if (check_body && result.ParseFromHttpResponse(resp_headers, resp_body)) {
+            result.SetErrorInfo(resp_body);
+            return result;
+        }
+
+        result.SetSucc();
+        //resp->ParseFromXmlString(resp_body);
+        resp->ParseFromHeaders(resp_headers);
+        resp->SetBody(resp_body);
+        // resp requestid to result
+        result.SetXCosRequestId(resp->GetXCosRequestId());
+    }
+    
+    return result;
+}
+
+
 std::string ObjectOp::GeneratePresignedUrl(const GeneratePresignedUrlReq& req) {
     std::string auth_str = "";
     if (req.GetStartTimeInSec() == 0 || req.GetExpiredTimeInSec() == 0) {

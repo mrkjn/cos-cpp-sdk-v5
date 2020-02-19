@@ -395,6 +395,16 @@ public:
     /// \return 返回HTTP请求的状态码及错误信息
     CosResult PostObjectRestore(const PostObjectRestoreReq& request,
                                 PostObjectRestoreResp* response);
+     
+    /// \brief 对一个通过使用SQL从指定对象（CSV 格式或者 JSON 格式）中检索内容
+    ///
+    /// \param request   SelectObjectContent请求
+    /// \param response  SelectObjectContent返回
+    ///
+    /// \return 返回HTTP请求的状态码及错误信息
+
+    CosResult SelectObjectContent(const SelectObjectContentReq& request,
+                                 SelectObjectContentResp* response);    
 
     /// \brief 列出Bucket下的部分或者全部Object(包括多版本)
     ///

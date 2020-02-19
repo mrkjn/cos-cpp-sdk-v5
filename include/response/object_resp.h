@@ -472,5 +472,16 @@ public:
     ~PostObjectRestoreResp() {}
 };
 
+class SelectObjectContentResp : public BaseResp {
+public:
+    SelectObjectContentResp() {}
+    virtual ~SelectObjectContentResp() {} 
+    
+//protected:
+//    void ParseFromBody(const std::ostream& resp_stream); 
+//private:
+  
+};
+
 } // namespace qcloud_cos
 #endif // OBJECT_RESP_H

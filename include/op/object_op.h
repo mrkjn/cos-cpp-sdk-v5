@@ -202,6 +202,14 @@ public:
     ///
     /// \return 返回HTTP请求的状态码及错误信息
     CosResult PostObjectRestore(const PostObjectRestoreReq& req, PostObjectRestoreResp* resp);
+    
+    /// \brief COS Select 接口可以使用结构化查询语句从指定对象（CSV 格式或者 JSON 格式）中检索内容
+    ///
+    /// \param request   SelectObjectReq请求
+    /// \param response  SelectObjectResp返回
+    ///
+    /// \return 返回HTTP请求的状态码及错误信息
+    CosResult SelectObjectContent(const SelectObjectContentReq& req, SelectObjectContentResp* resp);
 
     std::string GeneratePresignedUrl(const GeneratePresignedUrlReq& req);
 
